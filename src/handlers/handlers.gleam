@@ -13,7 +13,7 @@ import handlers/logger
 
 fn not_found() {
   let body =
-    "There's nothing here. Try POSTing to /echo"
+    "There's nothing here."
     |> bit_string.from_string
 
   response.new(404)
