@@ -13,16 +13,13 @@ pub fn main() {
     |> result.then(int.parse)
     |> result.unwrap(3000)
 
-  // Start the web server process
-  assert Ok(_) =
-    elli.start(handlers.handle(handlers.new_service()), on_port: port)
-
   io.println(string.concat([
-    "Started listening on localhost:",
+    "starting listening on localhost:",
     int.to_string(port),
     " ✨",
   ]))
 
-  // Put the main process to sleep while the web server does its thing
-  erlang.sleep_forever()
+  // Start the web server process
+  assert Ok(_) =
+    elli.become(handlers.handle(handlers.new_service()), on_port: port)
 }
