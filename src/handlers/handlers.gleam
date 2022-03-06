@@ -31,7 +31,9 @@ fn not_found() {
   |> response.prepend_header("content-type", "text/plain")
 }
 
-fn create_pet(_: Service) -> fn(Request(BitString)) -> Response(BitBuilder) {
+fn create_pet(
+  _request: Service,
+) -> fn(Request(BitString)) -> Response(BitBuilder) {
   fn(_request) {
     response.new(201)
     |> response.set_body(bit_builder.from_string(""))
