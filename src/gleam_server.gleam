@@ -19,7 +19,6 @@ pub fn main() {
     " ✨",
   ]))
 
-  // Start the web server process
   assert Ok(_) =
     elli.become(handlers.handle(handlers.new_service()), on_port: port)
 }
