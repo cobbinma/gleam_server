@@ -76,12 +76,12 @@ fn pet_to_json(pet: Pet) -> Json {
 fn pets(_: Service) -> fn() -> Response(BitBuilder) {
   fn() {
     let reply =
-    array([Pet(id: 9, name: "tom", tag: Some("tag"))], of: pet_to_json)
-    |> json.to_string
+      array([Pet(id: 9, name: "tom", tag: Some("tag"))], of: pet_to_json)
+      |> json.to_string
 
-  response.new(200)
-  |> response.set_body(bit_builder.from_string(reply))
-  |> response.prepend_header("content-type", "application/json")
+    response.new(200)
+    |> response.set_body(bit_builder.from_string(reply))
+    |> response.prepend_header("content-type", "application/json")
   }
 }
 
