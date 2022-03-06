@@ -21,6 +21,10 @@ pub fn new_service() -> Service {
   Service(pets: map.new())
 }
 
+fn error(code: Int, message: String) -> Json {
+  object([#("code", int(code)), #("message", string(message))])
+}
+
 fn not_found() {
   let body =
     "There's nothing here."
@@ -42,18 +46,25 @@ fn create_pet(
 
 fn pet(_: Service) -> fn(String) -> Response(BitBuilder) {
   fn(id) {
-    let id =
-      int.parse(id)
-      |> result.unwrap(0)
-
-    let reply =
-      Pet(id: id, name: "tom", tag: None)
-      |> pet_to_json
-      |> json.to_string
-
-    response.new(200)
-    |> response.set_body(bit_builder.from_string(reply))
-    |> response.prepend_header("content-type", "application/json")
+    case int.parse(id) {
+      Error(_) -> {
+        let reply =
+          error(400, "id is not a valid number")
+          |> json.to_string
+        response.new(400)
+        |> response.set_body(bit_builder.from_string(reply))
+        |> response.prepend_header("content-type", "application/json")
+      }
+      Ok(id) -> {
+        let reply =
+          Pet(id: id, name: "tom", tag: None)
+          |> pet_to_json
+          |> json.to_string
+        response.new(200)
+        |> response.set_body(bit_builder.from_string(reply))
+        |> response.prepend_header("content-type", "application/json")
+      }
+    }
   }
 }
 
