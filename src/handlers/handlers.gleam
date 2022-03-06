@@ -8,7 +8,8 @@ import gleam/http/elli
 import gleam/http/service
 import gleam/http/request
 import gleam/http/response
-import gleam/json.{array, int, object, string}
+import gleam/option.{None, Option, Some}
+import gleam/json.{Json, array, int, null, object, string}
 import handlers/logger
 
 fn not_found() {
@@ -32,7 +33,8 @@ fn pet(id) {
     |> result.unwrap(0)
 
   let reply =
-    object([#("name", string("tom")), #("id", int(id))])
+    Pet(id: id, name: "tom", tag: None)
+    |> pet_to_json
     |> json.to_string
 
   response.new(200)
@@ -40,15 +42,27 @@ fn pet(id) {
   |> response.prepend_header("content-type", "application/json")
 }
 
+type Pet {
+  Pet(id: Int, name: String, tag: Option(String))
+}
+
+fn pet_to_json(pet: Pet) -> Json {
+  object([
+    #("id", int(pet.id)),
+    #("name", string(pet.name)),
+    #(
+      "tag",
+      case pet.tag {
+        Some(tag) -> string(tag)
+        None -> null()
+      },
+    ),
+  ])
+}
+
 fn pets() {
   let reply =
-    array(
-      [
-        object([#("name", string("tom")), #("id", int(9))])
-        |> json.to_string,
-      ],
-      of: string,
-    )
+    array([Pet(id: 9, name: "tom", tag: Some("tag"))], of: pet_to_json)
     |> json.to_string
 
   response.new(200)
