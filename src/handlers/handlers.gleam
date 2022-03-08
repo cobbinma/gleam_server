@@ -1,6 +1,6 @@
 import gleam/bit_builder.{BitBuilder}
 import gleam/bit_string
-import gleam/result
+import gleam/result.{map_error, then}
 import gleam/string
 import gleam/map.{Map}
 import gleam/int
@@ -10,7 +10,8 @@ import gleam/http/service
 import gleam/http/request.{Request}
 import gleam/http/response.{Response}
 import gleam/option.{None, Option, Some}
-import gleam/json.{Json, array, int, null, object, string}
+import gleam/json.{Json, array, int, nullable, object, string}
+import gleam/dynamic
 import handlers/logger
 
 pub opaque type Service {
@@ -36,11 +37,25 @@ fn not_found() {
 }
 
 fn create_pet(
-  _request: Service,
+  _service: Service,
 ) -> fn(Request(BitString)) -> Response(BitBuilder) {
-  fn(_request) {
-    response.new(201)
-    |> response.set_body(bit_builder.from_string(""))
+  fn(request: Request(BitString)) {
+    case request.body
+    |> bit_string.to_string
+    |> map_error(fn(_) -> json.DecodeError { json.UnexpectedEndOfInput })
+    |> then(pet_from_json) {
+      Ok(_) ->
+        response.new(201)
+        |> response.set_body(bit_builder.from_string(""))
+      Error(_) -> {
+        let reply =
+          error(400, "invalid request")
+          |> json.to_string
+        response.new(400)
+        |> response.set_body(bit_builder.from_string(reply))
+        |> response.prepend_header("content-type", "application/json")
+      }
+    }
   }
 }
 
@@ -76,14 +91,20 @@ fn pet_to_json(pet: Pet) -> Json {
   object([
     #("id", int(pet.id)),
     #("name", string(pet.name)),
-    #(
-      "tag",
-      case pet.tag {
-        Some(tag) -> string(tag)
-        None -> null()
-      },
-    ),
+    #("tag", nullable(pet.tag, string)),
   ])
+}
+
+fn pet_from_json(json_string: String) -> Result(Pet, json.DecodeError) {
+  let pet_decoder =
+    dynamic.decode3(
+      Pet,
+      dynamic.field("id", of: dynamic.int),
+      dynamic.field("name", of: dynamic.string),
+      dynamic.field("tag", of: dynamic.optional(dynamic.string)),
+    )
+
+  json.decode(from: json_string, using: pet_decoder)
 }
 
 fn pets(_: Service) -> fn() -> Response(BitBuilder) {
