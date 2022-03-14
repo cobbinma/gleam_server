@@ -1,4 +1,5 @@
 import handlers/handlers
+import service
 import gleam/io
 import gleam/int
 import gleam/string
@@ -20,5 +21,5 @@ pub fn main() {
   ]))
 
   assert Ok(_) =
-    elli.become(handlers.handle(handlers.new_service()), on_port: port)
+    elli.become(handlers.handle(service.new_service()), on_port: port)
 }

@@ -2,25 +2,19 @@ import gleam/bit_builder.{BitBuilder}
 import gleam/bit_string
 import gleam/result.{map_error, then}
 import gleam/string
-import gleam/map.{Map}
+import gleam/map
 import gleam/int
 import gleam/http.{Get, Post}
 import gleam/http/elli
 import gleam/http/service
 import gleam/http/request.{Request}
 import gleam/http/response.{Response}
-import gleam/option.{None, Option, Some}
+import gleam/option
 import gleam/json.{Json, array, int, nullable, object, string}
 import gleam/dynamic
 import handlers/logger
-
-pub opaque type Service {
-  Service(pets: Map(Int, Pet))
-}
-
-pub fn new_service() -> Service {
-  Service(pets: map.new())
-}
+import service.{Service}
+import models.{Pet}
 
 fn error(code: Int, message: String) -> Json {
   object([#("code", int(code)), #("message", string(message))])
@@ -37,16 +31,18 @@ fn not_found() {
 }
 
 fn create_pet(
-  _service: Service,
+  service: Service,
 ) -> fn(Request(BitString)) -> Response(BitBuilder) {
   fn(request: Request(BitString)) {
     case request.body
     |> bit_string.to_string
     |> map_error(fn(_) -> json.DecodeError { json.UnexpectedEndOfInput })
     |> then(pet_from_json) {
-      Ok(_) ->
+      Ok(pet) -> {
+        service.add_pet(service, pet)
         response.new(201)
         |> response.set_body(bit_builder.from_string(""))
+      }
       Error(_) -> {
         let reply =
           error(400, "invalid request")
@@ -59,7 +55,7 @@ fn create_pet(
   }
 }
 
-fn pet(_: Service) -> fn(String) -> Response(BitBuilder) {
+fn pet(service: Service) -> fn(String) -> Response(BitBuilder) {
   fn(id) {
     case int.parse(id) {
       Error(_) -> {
@@ -70,21 +66,27 @@ fn pet(_: Service) -> fn(String) -> Response(BitBuilder) {
         |> response.set_body(bit_builder.from_string(reply))
         |> response.prepend_header("content-type", "application/json")
       }
-      Ok(id) -> {
-        let reply =
-          Pet(id: id, name: "tom", tag: None)
-          |> pet_to_json
-          |> json.to_string
-        response.new(200)
-        |> response.set_body(bit_builder.from_string(reply))
-        |> response.prepend_header("content-type", "application/json")
-      }
+      Ok(id) ->
+        case service.get_pet(service, id) {
+          Ok(pet) -> {
+            let reply =
+              pet
+              |> pet_to_json
+              |> json.to_string
+            response.new(200)
+            |> response.set_body(bit_builder.from_string(reply))
+            |> response.prepend_header("content-type", "application/json")
+          }
+          Error(_) ->
+            response.new(404)
+            |> response.set_body(bit_builder.from_string(
+              error(404, "pet not found")
+              |> json.to_string,
+            ))
+            |> response.prepend_header("content-type", "application/json")
+        }
     }
   }
-}
-
-type Pet {
-  Pet(id: Int, name: String, tag: Option(String))
 }
 
 fn pet_to_json(pet: Pet) -> Json {
@@ -107,10 +109,10 @@ fn pet_from_json(json_string: String) -> Result(Pet, json.DecodeError) {
   json.decode(from: json_string, using: pet_decoder)
 }
 
-fn pets(_: Service) -> fn() -> Response(BitBuilder) {
+fn pets(service: Service) -> fn() -> Response(BitBuilder) {
   fn() {
     let reply =
-      array([Pet(id: 9, name: "tom", tag: Some("tag"))], of: pet_to_json)
+      array(service.get_pets(service), of: pet_to_json)
       |> json.to_string
 
     response.new(200)
