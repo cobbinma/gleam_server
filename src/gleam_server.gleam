@@ -17,7 +17,7 @@ pub fn main() {
   io.println(string.concat([
     "starting listening on localhost:",
     int.to_string(port),
-    " ✨",
+    " 🐶",
   ]))
 
   assert Ok(_) =
