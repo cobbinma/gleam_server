@@ -4,7 +4,6 @@ import gleam/io
 import gleam/int
 import gleam/string
 import gleam/result
-import gleam/erlang
 import gleam/erlang/os
 import gleam/http/elli
 

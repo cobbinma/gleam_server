@@ -1,15 +1,11 @@
 import gleam/bit_builder.{BitBuilder}
 import gleam/bit_string
 import gleam/result.{map_error, then}
-import gleam/string
-import gleam/map
 import gleam/int
 import gleam/http.{Get, Post}
-import gleam/http/elli
 import gleam/http/service
 import gleam/http/request.{Request}
 import gleam/http/response.{Response}
-import gleam/option
 import gleam/json.{Json, array, int, nullable, object, string}
 import gleam/dynamic
 import handlers/logger
